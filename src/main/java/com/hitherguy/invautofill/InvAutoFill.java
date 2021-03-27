@@ -35,9 +35,9 @@ import net.minecraftforge.fml.network.simple.SimpleChannel;
 
 public class InvAutoFill
 {
-	private static final Object SyncS = new Object();
+	private static final Object Sync = new Object();
 	public static final String MODID = "invautofill";
-	private static boolean Sync = true;
+	private static boolean ClientOnly = true;
 	public static final String version = "1";
 	public static SimpleChannel SInst;
 	public static KeyBinding[] keyBindings;
@@ -54,16 +54,16 @@ public class InvAutoFill
     private void setup(final FMLCommonSetupEvent event)
     {
         SInst = NetworkRegistry.newSimpleChannel(new ResourceLocation(MODID,"channel"), () -> version, s -> {
-        	synchronized(SyncS) {
-        		Sync = NetworkRegistry.ABSENT.equals(s) || NetworkRegistry.ACCEPTVANILLA.equals(s);
-        		return version.equals(s) || Sync;
+        	synchronized(Sync) {
+        		ClientOnly = NetworkRegistry.ABSENT.equals(s) || NetworkRegistry.ACCEPTVANILLA.equals(s);
+        		return version.equals(s) || ClientOnly;
         	}
         }, s -> version.equals(s) || NetworkRegistry.ABSENT.equals(s) || NetworkRegistry.ACCEPTVANILLA.equals(s));
         SInst.registerMessage(0,PacketAutofill.class,PacketAutofill::encode,PacketAutofill::new,PacketAutofill::handle);
     }
     public static boolean unsynced() {
-    	synchronized (SyncS) {
-    		return Sync;
+    	synchronized (Sync) {
+    		return ClientOnly;
     	}
     }
 
