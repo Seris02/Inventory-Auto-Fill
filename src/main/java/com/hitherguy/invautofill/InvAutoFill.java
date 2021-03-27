@@ -1,5 +1,7 @@
 package com.hitherguy.invautofill;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import org.lwjgl.glfw.GLFW;
@@ -33,8 +35,10 @@ import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.DistExecutor;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.client.registry.ClientRegistry;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -43,7 +47,6 @@ import net.minecraftforge.fml.network.simple.SimpleChannel;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod("invautofill")
-
 public class InvAutoFill
 {
 	//some of this code looks eerily similar to Inventory Tweaks Renewed, but the only code I used from that mod was when I needed help
@@ -51,16 +54,17 @@ public class InvAutoFill
 	private static final Object Sync = new Object();
 	public static final String MODID = "invautofill";
 	private static boolean ClientOnly = true;
-	public static final String version = "1";
+	public static final String version = "1.2";
 	public static SimpleChannel SInst;
 	public static KeyBinding[] keyBindings;
-	public static boolean allItems = false;
+	public static boolean allItems = true;
+	public static boolean configged = false;
     public InvAutoFill() {
         // Register the setup method for modloading
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
         // Register the doClientStuff method for modloading
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::doClientStuff);
-
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, ConfigHandler.CLIENTSPEC);
         // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
     }
@@ -112,7 +116,8 @@ public class InvAutoFill
     public void onEvent(KeyInputEvent event) {
     	InputMappings.Input input = InputMappings.getKey(event.getKey(), event.getScanCode());
     	if (event.getAction() == GLFW.GLFW_PRESS && keyBindings[3].isActiveAndMatches(input)) {
-    		allItems = !allItems;
+    		ConfigHandler.CLIENT.allItems.set(!ConfigHandler.CLIENT.allItems.get());
+    		allItems = ConfigHandler.CLIENT.allItems.get();
     		Minecraft instance = Minecraft.getInstance();
 			String s = allItems ? "Autofilling all items." : "Autofilling only items present.";
 			ITextComponent text = new StringTextComponent(s);
@@ -161,6 +166,9 @@ public class InvAutoFill
     }
     
     public static void autofill_request(boolean way) {
+    	if (!configged) {
+    		allItems = ConfigHandler.CLIENT.allItems.get();
+    	}
     	if (unsynced()) {
     		DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> autofillIntoInventory(Utils.safeGetPlayer(),way,allItems));
     	} else {
@@ -170,21 +178,36 @@ public class InvAutoFill
     
     public static void autofillIntoInventory(PlayerEntity player, boolean way, boolean allItems) {
     	Container c = player.containerMenu;
-    	IInventory relevant;
-    	IInventory irrelevant;
-		if (way) {
-			relevant = player.inventory;
-			irrelevant = ItemUtils.getNonPlayerInventory(c);
-		} else {
-			relevant = ItemUtils.getNonPlayerInventory(c);
-			irrelevant = player.inventory;
-		}
-		for (int x = 0; x < relevant.getContainerSize(); x++) {
+    	IInventory relevant = way ? player.inventory : ItemUtils.getNonPlayerInventory(c); //transferring from
+    	IInventory irrelevant = way ? ItemUtils.getNonPlayerInventory(c) : player.inventory; //transferring to
+    	int starting = way ? 9 : 0; //hotbar last
+    	List<Slot> playerSlots = new ArrayList<>();
+    	List<Slot> invSlots = new ArrayList<>();
+    	List<Slot> relevantSlots = way ? playerSlots : invSlots;
+    	List<Slot> irrelevantSlots = way ? invSlots : playerSlots;
+    	for (int u = 0; u < c.slots.size(); u++) {
+    		if (c.getSlot(u).container instanceof PlayerInventory && playerSlots.size() < 37) {
+    			playerSlots.add(c.getSlot(u));
+    		} else {
+    			invSlots.add(c.getSlot(u));
+    		}
+    	}
+		for (int x = starting; x < relevant.getContainerSize(); x++) {
 			ItemStack item = relevant.getItem(x);
-			if (item.isEmpty()) {
+			if (item.isEmpty() || !relevantSlots.get(x).mayPickup(player)) {
 				continue;
 			}
-			ItemUtils.quickMoveToContainer(irrelevant, item, allItems);
+			
+			ItemUtils.quickMoveToContainer(irrelevant, item, allItems, irrelevantSlots);
+		}
+		if (starting > 0) { //hotbar last
+			for (int x = 0; x < 10; x++) {
+				ItemStack item = relevant.getItem(x);
+				if (item.isEmpty()) {
+					continue;
+				}
+				ItemUtils.quickMoveToContainer(irrelevant, item, allItems, irrelevantSlots);
+			}
 		}
     }
 }

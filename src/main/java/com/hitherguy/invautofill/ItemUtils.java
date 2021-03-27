@@ -1,17 +1,19 @@
 package com.hitherguy.invautofill;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.container.Container;
+import net.minecraft.inventory.container.Slot;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
 public class ItemUtils {
 	
-	public static void quickMoveToContainer(IInventory inventory, ItemStack stack, boolean allItems) {
+	public static void quickMoveToContainer(IInventory inventory, ItemStack stack, boolean allItems, List<Slot> slots) {
 		Set<Item> item = new HashSet<Item>();
 		item.add(stack.getItem());
 		boolean stackable = stack.isStackable();
@@ -45,25 +47,24 @@ public class ItemUtils {
 			}
 		}
 		if (!stack.isEmpty()) {
-			putInFreeSlot(inventory,stack);
+			putInFreeSlot(inventory,stack,false, slots);
 		}
 	}
-	public static void putInFreeSlot(IInventory inv, ItemStack stack) {
-		for (int x = 0; x < inv.getContainerSize(); x++) {
-			if (inv.getItem(x).isEmpty() && inv.canPlaceItem(x, stack)) {
-				inv.setItem(x, stack.copy());
-				stack.setCount(0);
+	public static void putInFreeSlot(IInventory inv, ItemStack stack, boolean inHotbar, List<Slot> slots) {
+		for (int x = (!inHotbar && inv instanceof PlayerInventory) ? 9 : 0; x < inv.getContainerSize(); x++) {
+			if (inv.getItem(x).isEmpty() && inv.canPlaceItem(x, stack) && !(inv instanceof PlayerInventory && x > 35)) {
+				if (slots.get(x).mayPlace(stack)) {
+					inv.setItem(x, stack.copy());
+					stack.setCount(0);
+					return;
+				}
 			}
 		}
-	}
-	public static int freeSlot(IInventory inv, ItemStack stack) {
-		for (int x = 0; x < inv.getContainerSize(); x++) {
-			if (inv.getItem(x).isEmpty() && inv.canPlaceItem(x, stack)) {
-				return x;
-			}
+		if (!inHotbar && inv instanceof PlayerInventory) {
+			putInFreeSlot(inv,stack,true, slots);
 		}
-		return inv.getContainerSize() + 1;
 	}
+
 	public static int stacksNotFull(IInventory inv, ItemStack stack) {
 		int slotsFree = 0;
 		for (int y = 0; y < inv.getContainerSize(); y++) {
