@@ -1,8 +1,15 @@
 package com.hitherguy.invautofill;
 
+import java.util.UUID;
+
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.opengl.GL11;
+
+import com.mojang.blaze3d.matrix.MatrixStack;
 
 import net.minecraft.block.Block;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.screen.inventory.ContainerScreen;
 import net.minecraft.client.gui.screen.inventory.CreativeScreen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
@@ -15,11 +22,15 @@ import net.minecraft.inventory.container.Container;
 import net.minecraft.inventory.container.Slot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.GuiScreenEvent;
+import net.minecraftforge.client.event.InputEvent.KeyInputEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.client.registry.ClientRegistry;
@@ -35,12 +46,15 @@ import net.minecraftforge.fml.network.simple.SimpleChannel;
 
 public class InvAutoFill
 {
+	//some of this code looks eerily similar to Inventory Tweaks Renewed, but the only code I used from that mod was when I needed help
+	//with sending packets and making sure the client and server bits worked correctly, thanks reo-ar
 	private static final Object Sync = new Object();
 	public static final String MODID = "invautofill";
 	private static boolean ClientOnly = true;
 	public static final String version = "1";
 	public static SimpleChannel SInst;
 	public static KeyBinding[] keyBindings;
+	public static boolean allItems = false;
     public InvAutoFill() {
         // Register the setup method for modloading
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
@@ -70,11 +84,12 @@ public class InvAutoFill
     private void doClientStuff(final FMLClientSetupEvent event) {
         // do something that can only be done on the client
     	if (keyBindings == null) {
-    		keyBindings = new KeyBinding[3];
+    		keyBindings = new KeyBinding[4];
     	}
     	keyBindings[0] = new KeyBinding("key.autofillplayer.desc",GLFW.GLFW_KEY_SEMICOLON,"key.categories.invautofill");
     	keyBindings[1] = new KeyBinding("key.autofillinv.desc",GLFW.GLFW_KEY_LEFT_BRACKET,"key.categories.invautofill");
     	keyBindings[2] = new KeyBinding("key.autofillundermouse.desc",GLFW.GLFW_MOUSE_BUTTON_MIDDLE,"key.categories.invautofill");
+    	keyBindings[3] = new KeyBinding("key.autofilltoggleall.desc",GLFW.GLFW_KEY_RIGHT_BRACKET,"key.categories.invautofill");
         for (KeyBinding key : keyBindings) {
         	ClientRegistry.registerKeyBinding(key);
         }
@@ -93,6 +108,19 @@ public class InvAutoFill
     }
     
     @OnlyIn(Dist.CLIENT)
+    @SubscribeEvent(priority=EventPriority.NORMAL,receiveCanceled=true)
+    public void onEvent(KeyInputEvent event) {
+    	InputMappings.Input input = InputMappings.getKey(event.getKey(), event.getScanCode());
+    	if (event.getAction() == GLFW.GLFW_PRESS && keyBindings[3].isActiveAndMatches(input)) {
+    		allItems = !allItems;
+    		Minecraft instance = Minecraft.getInstance();
+			String s = allItems ? "Autofilling all items." : "Autofilling only items present.";
+			ITextComponent text = new StringTextComponent(s);
+			instance.player.sendMessage(text, null);
+    	}
+    }
+    
+    @OnlyIn(Dist.CLIENT)
     @SubscribeEvent
     public void keyInput(GuiScreenEvent.KeyboardKeyPressedEvent.Pre event) {
     	InputMappings.Input input = InputMappings.getKey(event.getKeyCode(), event.getScanCode());
@@ -105,6 +133,7 @@ public class InvAutoFill
 	    	if (keyBindings[1].isActiveAndMatches(input)) {
 	    		autofill_request(false);
 	    	}
+	    	
 	    	Slot slotUnderMouse = ((ContainerScreen<?>) event.getGui()).getSlotUnderMouse();
 	    	if (slotUnderMouse != null && slotUnderMouse.container != null) {
 	    		boolean way = !(slotUnderMouse.container instanceof PlayerInventory);
@@ -133,13 +162,13 @@ public class InvAutoFill
     
     public static void autofill_request(boolean way) {
     	if (unsynced()) {
-    		DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> autofillIntoInventory(Utils.safeGetPlayer(),way));
+    		DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> autofillIntoInventory(Utils.safeGetPlayer(),way,allItems));
     	} else {
-    		SInst.sendToServer(new PacketAutofill(way));
+    		SInst.sendToServer(new PacketAutofill(way,allItems));
     	}
     }
     
-    public static void autofillIntoInventory(PlayerEntity player, boolean way) {
+    public static void autofillIntoInventory(PlayerEntity player, boolean way, boolean allItems) {
     	Container c = player.containerMenu;
     	IInventory relevant;
     	IInventory irrelevant;
@@ -152,11 +181,10 @@ public class InvAutoFill
 		}
 		for (int x = 0; x < relevant.getContainerSize(); x++) {
 			ItemStack item = relevant.getItem(x);
-			//System.out.println(item.getItem().getRegistryName().toString());
 			if (item.isEmpty()) {
 				continue;
 			}
-			ItemUtils.quickMoveToContainer(irrelevant, item, true);
+			ItemUtils.quickMoveToContainer(irrelevant, item, allItems);
 		}
     }
 }

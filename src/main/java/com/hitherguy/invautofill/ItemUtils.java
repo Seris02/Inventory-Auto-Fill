@@ -10,14 +10,13 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
 public class ItemUtils {
-	//some of this code looks eerily similar to Inventory Tweaks Renewed, but the only code I used from that mod was when I needed help
-	//with sending packets and making sure the client and server bits worked correctly, thanks reo-ar
-	public static void quickMoveToContainer(IInventory inventory, ItemStack stack, boolean onlyIfInAlready) {
+	
+	public static void quickMoveToContainer(IInventory inventory, ItemStack stack, boolean allItems) {
 		Set<Item> item = new HashSet<Item>();
 		item.add(stack.getItem());
 		boolean stackable = stack.isStackable();
 		int stacksize = stack.getMaxStackSize();
-		if (onlyIfInAlready) {
+		if (!allItems) {
 			if (!inventory.hasAnyOf(item)) {
 				return;
 			}
@@ -41,7 +40,7 @@ public class ItemUtils {
 						stacksunfilled = stacksNotFull(inventory,stack);
 					}
 				}
-			} else { //make sure to get the first free slot instead
+			} else {
 				break;
 			}
 		}
