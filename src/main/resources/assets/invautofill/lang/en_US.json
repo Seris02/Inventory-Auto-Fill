@@ -1,0 +1,6 @@
+{
+	"key.categories.invautofill": "Inventory Auto Fill",
+	"key.autofillplayer.desc": "Autofill from Player",
+	"key.autofillinv.desc": "Autofill to Player",
+	"key.autofillundermouse.desc": "Autofill to inventory under cursor"
+}
