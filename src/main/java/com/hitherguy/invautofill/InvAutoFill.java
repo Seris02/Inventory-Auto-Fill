@@ -112,6 +112,9 @@ public class InvAutoFill
     @OnlyIn(Dist.CLIENT)
     @SubscribeEvent
     public void onGuiInit(GuiScreenEvent.InitGuiEvent.Post event) {
+    	if (!ConfigHandler.CLIENT.hotbarButtonEnabled.get()) {
+    		return;
+    	}
     	if (event.getGui() instanceof ContainerScreen && !(event.getGui() instanceof CreativeScreen)) {
     		ContainerScreen<?> c = ((ContainerScreen<?>)event.getGui());
     		Slot slotIn = ItemUtils.getPlayerSlots(c.getMenu()).get(8); //last hotbar slot
