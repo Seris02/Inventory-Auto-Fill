@@ -7,9 +7,12 @@ import net.minecraftforge.common.ForgeConfigSpec;
 public class ConfigHandler {
 	public static class Client {
 		public final ForgeConfigSpec.BooleanValue allItems;
+		public final ForgeConfigSpec.BooleanValue hotbarLocked;
 		public Client(ForgeConfigSpec.Builder builder)  {
 			builder.comment("Client").push("client");
 			allItems = builder.comment("Set this to true if all items should be transferred when autofilling an inventory, as opposed to only transferring items that are already in that inventory.").define("allItems", true);
+			hotbarLocked = builder.comment("Set this to true if the hotbar should not be messed with when filling.").define("hotbarLocked", true);
+			
 			builder.pop();
 		}
 	}

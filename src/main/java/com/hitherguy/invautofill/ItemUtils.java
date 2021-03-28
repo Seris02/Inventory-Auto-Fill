@@ -1,5 +1,6 @@
 package com.hitherguy.invautofill;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -51,8 +52,9 @@ public class ItemUtils {
 		}
 	}
 	public static void putInFreeSlot(IInventory inv, ItemStack stack, boolean inHotbar, List<Slot> slots) {
-		for (int x = (!inHotbar && inv instanceof PlayerInventory) ? 9 : 0; x < inv.getContainerSize(); x++) {
-			if (inv.getItem(x).isEmpty() && inv.canPlaceItem(x, stack) && !(inv instanceof PlayerInventory && x > 35)) {
+		boolean hotbarLocked = ConfigHandler.CLIENT.hotbarLocked.get();
+		for (int x = (!inHotbar && inv instanceof PlayerInventory) ? 9 : 0; x < slots.size(); x++) {
+			if (inv.getItem(x).isEmpty() && inv.canPlaceItem(x, stack) && !(inv instanceof PlayerInventory && x > 35 && !hotbarLocked)) {
 				if (slots.get(x).mayPlace(stack)) {
 					inv.setItem(x, stack.copy());
 					stack.setCount(0);
@@ -83,5 +85,14 @@ public class ItemUtils {
 			}
 		}
 		return null;
+	}
+	public static List<Slot> getPlayerSlots(Container container) {
+		List<Slot> slots = new ArrayList<>();
+		for (int x = 0; x < container.slots.size(); x++) {
+			if (container.slots.get(x).container instanceof PlayerInventory) {
+				slots.add(container.getSlot(x));
+			}
+		}
+		return slots;
 	}
 }

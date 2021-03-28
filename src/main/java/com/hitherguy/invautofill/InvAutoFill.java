@@ -2,16 +2,14 @@ package com.hitherguy.invautofill;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import org.lwjgl.glfw.GLFW;
-import org.lwjgl.opengl.GL11;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
+import com.google.common.base.Throwables;
+import com.hitherguy.invautofill.gui.InvAutoFillButtonLock;
 
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.screen.inventory.ContainerScreen;
 import net.minecraft.client.gui.screen.inventory.CreativeScreen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
@@ -45,12 +43,13 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.network.NetworkRegistry;
 import net.minecraftforge.fml.network.simple.SimpleChannel;
 
-// The value here should match an entry in the META-INF/mods.toml file
 @Mod("invautofill")
 public class InvAutoFill
 {
 	//some of this code looks eerily similar to Inventory Tweaks Renewed, but the only code I used from that mod was when I needed help
 	//with sending packets and making sure the client and server bits worked correctly, thanks reo-ar
+	//version 1.3 - and the code for the GUI button, which I adapted and improved, PS if you're reading this, you don't need to
+	//use the obfuscationreflection to get guiLeft and guiTop, there are methods for that for ContainerScreen, -getGuiLeft() and -getGuiTop()
 	private static final Object Sync = new Object();
 	public static final String MODID = "invautofill";
 	private static boolean ClientOnly = true;
@@ -86,7 +85,6 @@ public class InvAutoFill
     }
 
     private void doClientStuff(final FMLClientSetupEvent event) {
-        // do something that can only be done on the client
     	if (keyBindings == null) {
     		keyBindings = new KeyBinding[4];
     	}
@@ -102,13 +100,31 @@ public class InvAutoFill
 
     // You can use EventBusSubscriber to automatically subscribe events on the contained class (this is subscribing to the MOD
     // Event bus for receiving Registry Events)
-    @Mod.EventBusSubscriber(bus=Mod.EventBusSubscriber.Bus.MOD)
+    /*@Mod.EventBusSubscriber(bus=Mod.EventBusSubscriber.Bus.MOD)
     public static class RegistryEvents {
         @SubscribeEvent
         public static void onBlocksRegistry(final RegistryEvent.Register<Block> blockRegistryEvent) {
             // register a new block here
             
         }
+    }*/
+    
+    @OnlyIn(Dist.CLIENT)
+    @SubscribeEvent
+    public void onGuiInit(GuiScreenEvent.InitGuiEvent.Post event) {
+    	if (event.getGui() instanceof ContainerScreen && !(event.getGui() instanceof CreativeScreen)) {
+    		ContainerScreen<?> c = ((ContainerScreen<?>)event.getGui());
+    		Slot slotIn = ItemUtils.getPlayerSlots(c.getMenu()).get(8); //last hotbar slot
+    		if (slotIn != null) {
+    			try {
+    				event.addWidget(new InvAutoFillButtonLock(c.getGuiLeft() + slotIn.x + 17, c.getGuiTop() + slotIn.y + 58));
+    			} catch (Exception exception) {
+    				Throwables.throwIfUnchecked(exception);
+    				throw new RuntimeException(exception);
+    			}
+    		}
+    	}
+    	
     }
     
     @OnlyIn(Dist.CLIENT)
@@ -185,6 +201,7 @@ public class InvAutoFill
     	List<Slot> invSlots = new ArrayList<>();
     	List<Slot> relevantSlots = way ? playerSlots : invSlots;
     	List<Slot> irrelevantSlots = way ? invSlots : playerSlots;
+    	boolean hotbarLocked = ConfigHandler.CLIENT.hotbarLocked.get();
     	for (int u = 0; u < c.slots.size(); u++) {
     		if (c.getSlot(u).container instanceof PlayerInventory && playerSlots.size() < 37) {
     			playerSlots.add(c.getSlot(u));
@@ -200,7 +217,7 @@ public class InvAutoFill
 			
 			ItemUtils.quickMoveToContainer(irrelevant, item, allItems, irrelevantSlots);
 		}
-		if (starting > 0) { //hotbar last
+		if (starting > 0 && !hotbarLocked) { //hotbar last and locked
 			for (int x = 0; x < 10; x++) {
 				ItemStack item = relevant.getItem(x);
 				if (item.isEmpty()) {
