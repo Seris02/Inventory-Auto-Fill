@@ -95,4 +95,26 @@ public class ItemUtils {
 		}
 		return slots;
 	}
+	public static Slot getLastHotbarSlot(List<Slot> slots) {
+		Slot slot = null;
+		int x = 0;
+		int y = 0;
+		for (int d = 0; d < slots.size(); d++) {
+			Slot search = slots.get(d);
+			if (search.x >= x && search.y >= y) {
+				slot = search;
+				x = search.x;
+				y = search.y;
+			}
+		}
+		/*for (int d = 0; d < slots.size(); d++) {
+			Slot search = slots.get(d);
+			if (search.y > y && search.x >= x) {
+				slot = search;
+				x = search.x;
+				y = search.y;
+			}
+		}*/
+		return slot;
+	}
 }

@@ -2,6 +2,7 @@ package com.hitherguy.invautofill;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.lang.reflect.Field;
 
 import org.lwjgl.glfw.GLFW;
 
@@ -36,6 +37,7 @@ import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.client.registry.ClientRegistry;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -58,6 +60,8 @@ public class InvAutoFill
 	public static KeyBinding[] keyBindings;
 	public static boolean allItems = true;
 	public static boolean configged = false;
+	public static final Field guiLeftField = DistExecutor.unsafeCallWhenOn(Dist.CLIENT, () -> () -> ObfuscationReflectionHelper.findField(ContainerScreen.class, "field_147003_i"));
+	public static final Field guiTopField = DistExecutor.unsafeCallWhenOn(Dist.CLIENT, () -> () -> ObfuscationReflectionHelper.findField(ContainerScreen.class, "field_147009_r"));
     public InvAutoFill() {
         // Register the setup method for modloading
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
@@ -117,10 +121,12 @@ public class InvAutoFill
     	}
     	if (event.getGui() instanceof ContainerScreen && !(event.getGui() instanceof CreativeScreen)) {
     		ContainerScreen<?> c = ((ContainerScreen<?>)event.getGui());
-    		Slot slotIn = ItemUtils.getPlayerSlots(c.getMenu()).get(8); //last hotbar slot
+    		System.out.println(event.getGui().getClass().toString());
+    		Slot slotIn = ItemUtils.getLastHotbarSlot(ItemUtils.getPlayerSlots(c.getMenu())); //last hotbar slot
+    		//c.getMenu().
     		if (slotIn != null) {
     			try {
-    				event.addWidget(new InvAutoFillButtonLock(c.getGuiLeft() + slotIn.x + 17, c.getGuiTop() + slotIn.y + 58));
+    				event.addWidget(new InvAutoFillButtonLock(c.getGuiLeft() + slotIn.x + 17, c.getGuiTop() + slotIn.y));
     			} catch (Exception exception) {
     				Throwables.throwIfUnchecked(exception);
     				throw new RuntimeException(exception);
