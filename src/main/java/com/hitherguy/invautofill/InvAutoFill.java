@@ -29,6 +29,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.client.event.InputEvent.KeyInputEvent;
+import net.minecraftforge.client.settings.KeyConflictContext;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -55,14 +56,12 @@ public class InvAutoFill
 	private static final Object Sync = new Object();
 	public static final String MODID = "invautofill";
 	private static boolean ClientOnly = true;
-	public static final String version = "1.2";
+	public static final String version = "1.3.3";
 	public static SimpleChannel SInst;
 	public static KeyBinding[] keyBindings;
 	public static boolean allItems = true;
 	public static boolean configged = false;
-	public static final Field guiLeftField = DistExecutor.unsafeCallWhenOn(Dist.CLIENT, () -> () -> ObfuscationReflectionHelper.findField(ContainerScreen.class, "field_147003_i"));
-	public static final Field guiTopField = DistExecutor.unsafeCallWhenOn(Dist.CLIENT, () -> () -> ObfuscationReflectionHelper.findField(ContainerScreen.class, "field_147009_r"));
-    public InvAutoFill() {
+	public InvAutoFill() {
         // Register the setup method for modloading
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
         // Register the doClientStuff method for modloading
@@ -94,7 +93,7 @@ public class InvAutoFill
     	}
     	keyBindings[0] = new KeyBinding("key.autofillplayer.desc",GLFW.GLFW_KEY_SEMICOLON,"key.categories.invautofill");
     	keyBindings[1] = new KeyBinding("key.autofillinv.desc",GLFW.GLFW_KEY_LEFT_BRACKET,"key.categories.invautofill");
-    	keyBindings[2] = new KeyBinding("key.autofillundermouse.desc",GLFW.GLFW_MOUSE_BUTTON_MIDDLE,"key.categories.invautofill");
+    	keyBindings[2] = new KeyBinding("key.autofillundermouse.desc",KeyConflictContext.GUI,InputMappings.Type.MOUSE,GLFW.GLFW_MOUSE_BUTTON_MIDDLE,"key.categories.invautofill");
     	keyBindings[3] = new KeyBinding("key.autofilltoggleall.desc",GLFW.GLFW_KEY_RIGHT_BRACKET,"key.categories.invautofill");
         for (KeyBinding key : keyBindings) {
         	ClientRegistry.registerKeyBinding(key);
